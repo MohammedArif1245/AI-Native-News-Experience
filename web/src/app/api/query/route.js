@@ -2,7 +2,7 @@
  * POST /api/query
  * Handles follow-up questions about a briefing
  */
-export async function POST(request) {
+export async function action({ request }) {
   try {
     const body = await request.json();
     const { question, context, userType } = body;
@@ -18,66 +18,11 @@ export async function POST(request) {
       );
     }
 
-    // Build context-aware system prompt
-    const userTypeInstructions = {
-      student: "Use simple language and explain concepts clearly",
-      investor: "Focus on financial and market implications",
-      founder: "Focus on business and strategic insights",
-    };
-
-    const systemPrompt = `You are a helpful news analyst assistant answering follow-up questions about a news briefing.
-
-User Type: ${userType || "general"}
-Instructions: ${userTypeInstructions[userType] || "Provide clear, concise answers"}
-
-Context from previous briefing:
-Topic: ${context.topic}
-Summary: ${context.summary}
-Key Points: ${context.keyPoints?.join("; ")}
-Impact: ${context.impact}
-Next Steps: ${context.nextSteps}
-
-Rules:
-- Answer the user's question directly and concisely
-- Use information from the context when relevant
-- If you don't know something, say so clearly
-- Keep answers under 150 words
-- Be conversational but informative`;
-
-    // Call AI integration
-    const aiResponse = await fetch(
-      `${process.env.NEXT_PUBLIC_CREATE_APP_URL}/integrations/google-gemini-2-5-flash/`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          messages: [
-            {
-              role: "system",
-              content: systemPrompt,
-            },
-            {
-              role: "user",
-              content: question,
-            },
-          ],
-        }),
-      },
-    );
-
-    if (!aiResponse.ok) {
-      throw new Error(
-        `AI integration failed: ${aiResponse.status} ${aiResponse.statusText}`,
-      );
-    }
-
-    const aiData = await aiResponse.json();
-    const answer = aiData.choices[0].message.content;
+    // Mock response for demo
+    const mockAnswer = generateMockAnswer(question, context, userType);
 
     return Response.json({
-      answer,
+      answer: mockAnswer,
       question,
     });
   } catch (error) {
@@ -87,4 +32,27 @@ Rules:
       { status: 500 },
     );
   }
+}
+
+function generateMockAnswer(question, context, userType) {
+  const lowerQuestion = question.toLowerCase();
+  
+  if (lowerQuestion.includes('who') || lowerQuestion.includes('stakeholder')) {
+    return `The main stakeholders mentioned are: ${context.stakeholders?.join(", ")}. These groups are most directly affected by the developments in ${context.topic}.`;
+  }
+  
+  if (lowerQuestion.includes('when') || lowerQuestion.includes('next') || lowerQuestion.includes('future')) {
+    return context.nextSteps || "The situation is still evolving. Continue monitoring for updates in the coming days and weeks.";
+  }
+  
+  if (lowerQuestion.includes('why') || lowerQuestion.includes('cause') || lowerQuestion.includes('reason')) {
+    return "This development is driven by multiple factors including market forces, regulatory changes, and public demand. The exact reasons vary depending on stakeholder perspectives.";
+  }
+  
+  if (lowerQuestion.includes('how') || lowerQuestion.includes('impact') || lowerQuestion.includes('effect')) {
+    return context.impact || "The impact varies depending on who is affected. For detailed analysis of specific impacts, please refer to the briefing sections above.";
+  }
+  
+  // Default response
+  return `Based on the briefing about ${context.topic}, ${context.summary} You can find more details in the Key Points section of the briefing.`;
 }

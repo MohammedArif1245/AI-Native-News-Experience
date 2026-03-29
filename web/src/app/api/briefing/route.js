@@ -2,7 +2,7 @@
  * POST /api/briefing
  * Generates a structured AI briefing for a given news topic
  */
-export async function POST(request) {
+export async function action({ request }) {
   try {
     const body = await request.json();
     const { topic, userType } = body;
@@ -18,110 +18,11 @@ export async function POST(request) {
       );
     }
 
-    // Build personalized system prompt based on user type
-    const userTypeInstructions = {
-      student: `
-- Use simple, clear language that a student can understand
-- Explain technical terms and jargon
-- Focus on educational value and learning
-- Include context and background information
-- Make connections to real-world implications`,
-      investor: `
-- Focus on financial impact and market implications
-- Highlight investment opportunities and risks
-- Include data-driven insights and metrics
-- Analyze stakeholder positions and strategic moves
-- Consider market dynamics and competitive landscape`,
-      founder: `
-- Focus on business model implications and opportunities
-- Highlight strategic insights for entrepreneurs
-- Include actionable takeaways and lessons
-- Analyze competitive dynamics and market gaps
-- Consider innovation and disruption angles`,
-    };
-
-    const systemPrompt = `You are an expert news analyst that creates structured, insightful briefings.
-
-User Type: ${userType.toUpperCase()}
-${userTypeInstructions[userType]}
-
-You must respond with ONLY valid JSON in this exact format:
-{
-  "summary": "A 3-4 sentence overview of the topic",
-  "keyPoints": ["point 1", "point 2", "point 3", "point 4"],
-  "stakeholders": ["stakeholder 1", "stakeholder 2", "stakeholder 3"],
-  "impact": "2-3 sentences describing the impact on economy/business/users",
-  "nextSteps": "2-3 sentences about what might happen next"
-}
-
-Rules:
-- Be factual and balanced
-- If you don't have current information, frame insights as "based on typical patterns" or "generally in such cases"
-- Do not make up specific statistics or claims
-- Keep all text clear and concise
-- Ensure all JSON is properly formatted`;
-
-    const userPrompt = `Analyze this news topic and provide a structured briefing: "${topic}"`;
-
-    // Call AI integration
-    const aiResponse = await fetch(
-      `${process.env.NEXT_PUBLIC_CREATE_APP_URL}/integrations/google-gemini-2-5-flash/`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          messages: [
-            {
-              role: "system",
-              content: systemPrompt,
-            },
-            {
-              role: "user",
-              content: userPrompt,
-            },
-          ],
-        }),
-      },
-    );
-
-    if (!aiResponse.ok) {
-      throw new Error(
-        `AI integration failed: ${aiResponse.status} ${aiResponse.statusText}`,
-      );
-    }
-
-    const aiData = await aiResponse.json();
-    const content = aiData.choices[0].message.content;
-
-    // Parse the JSON response
-    let briefing;
-    try {
-      // Remove markdown code blocks if present
-      const cleanContent = content
-        .replace(/```json\n?/g, "")
-        .replace(/```\n?/g, "")
-        .trim();
-      briefing = JSON.parse(cleanContent);
-    } catch (parseError) {
-      console.error("Failed to parse AI response:", content);
-      throw new Error("Failed to parse AI response as JSON");
-    }
-
-    // Validate response structure
-    if (
-      !briefing.summary ||
-      !briefing.keyPoints ||
-      !briefing.stakeholders ||
-      !briefing.impact ||
-      !briefing.nextSteps
-    ) {
-      throw new Error("AI response missing required fields");
-    }
+    // Mock AI response for demo purposes
+    const mockBriefing = generateMockBriefing(topic, userType);
 
     return Response.json({
-      ...briefing,
+      ...mockBriefing,
       topic,
       userType,
     });
@@ -132,4 +33,47 @@ Rules:
       { status: 500 },
     );
   }
+}
+
+function generateMockBriefing(topic, userType) {
+  const templates = {
+    student: {
+      summary: `${topic} is a significant development that affects many people in their daily lives. It involves important changes that students should understand for their future.`,
+      keyPoints: [
+        "This is a major news event with wide-reaching implications",
+        "It affects students and young people specifically",
+        "The government or organizations are taking action",
+        "There are both benefits and challenges to consider"
+      ],
+      stakeholders: ["Students", "Teachers", "Government", "Parents", "Society"],
+      impact: "This news affects how students learn, what opportunities are available, and what skills will be valuable in the future. Understanding this helps prepare for tomorrow.",
+      nextSteps: "Continue watching for updates, research more about the topic, and consider how it might affect your future career or studies."
+    },
+    investor: {
+      summary: `${topic} presents significant financial implications for markets and investment portfolios. Key stakeholders are making strategic moves that could affect market dynamics.`,
+      keyPoints: [
+        "Market impact is expected to be substantial",
+        "Several companies stand to gain or lose from this",
+        "Regulatory changes may affect investment strategies",
+        "Analysts are closely watching the developments"
+      ],
+      stakeholders: ["Market Analysts", "Corporations", "Regulators", "Investors", "Banks"],
+      impact: "This development could create new investment opportunities while also posing risks. Smart investors should monitor the situation and potentially adjust their portfolios.",
+      nextSteps: "Review your portfolio for exposure, consider hedging strategies, and stay updated on regulatory developments that might affect your investments."
+    },
+    founder: {
+      summary: `${topic} creates new opportunities and challenges for entrepreneurs and businesses. Understanding these dynamics is crucial for strategic planning.`,
+      keyPoints: [
+        "New business opportunities are emerging from this",
+        "Competition landscape may shift significantly",
+        "Customer expectations are evolving",
+        "Innovation in this space is accelerating"
+      ],
+      stakeholders: ["Startups", "Enterprises", "Customers", "Investors", "Competitors"],
+      impact: "This news affects business models, creates new market opportunities, and may require pivoting strategies. Founders should evaluate how it impacts their value proposition.",
+      nextSteps: "Analyze how this affects your business model, explore partnership opportunities, and consider innovating to meet new market demands."
+    }
+  };
+
+  return templates[userType] || templates.student;
 }

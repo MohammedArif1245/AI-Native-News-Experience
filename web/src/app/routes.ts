@@ -5,6 +5,7 @@ import {
 	type RouteConfigEntry,
 	index,
 	route,
+	prefix,
 } from '@react-router/dev/routes';
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
@@ -13,6 +14,7 @@ type Tree = {
 	path: string;
 	children: Tree[];
 	hasPage: boolean;
+	hasRoute: boolean;
 	isParam: boolean;
 	paramName: string;
 	isCatchAll: boolean;
@@ -24,6 +26,7 @@ function buildRouteTree(dir: string, basePath = ''): Tree {
 		path: basePath,
 		children: [],
 		hasPage: false,
+		hasRoute: false,
 		isParam: false,
 		isCatchAll: false,
 		paramName: '',
@@ -54,6 +57,8 @@ function buildRouteTree(dir: string, basePath = ''): Tree {
 			node.children.push(childNode);
 		} else if (file === 'page.jsx') {
 			node.hasPage = true;
+    } else if (file === 'route.js') {
+			node.hasRoute = true;
     }
 	}
 
@@ -96,6 +101,13 @@ function generateRoutes(node: Tree): RouteConfigEntry[] {
 			routePath = processedSegments.join('/');
 			routes.push(route(routePath, componentPath));
 		}
+	}
+
+	// Handle API routes (route.js files)
+	if (node.hasRoute) {
+		const routePath = node.path === '' ? '/' : `/${node.path}`;
+		const routeFilePath = node.path === '' ? './route.js' : `./${node.path}/route.js`;
+		routes.push(route(routePath, routeFilePath));
 	}
 
 	for (const child of node.children) {

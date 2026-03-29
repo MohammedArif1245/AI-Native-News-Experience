@@ -13,7 +13,6 @@ export default function QnABox({ briefing, userType }) {
     if (!question.trim()) return;
 
     const userQuestion = question.trim();
-    setQuestion("");
     setError(null);
     setLoading(true);
 
@@ -42,6 +41,9 @@ export default function QnABox({ briefing, userType }) {
 
       const data = await response.json();
 
+      // Clear input after successful response
+      setQuestion("");
+
       // Add AI answer to conversation
       setConversation((prev) => [
         ...prev,
@@ -50,7 +52,7 @@ export default function QnABox({ briefing, userType }) {
     } catch (err) {
       console.error("Error asking question:", err);
       setError("Failed to get an answer. Please try again.");
-      // Remove the question if there was an error
+      // Remove the question if there was an error but keep user's input
       setConversation((prev) => prev.slice(0, -1));
     } finally {
       setLoading(false);

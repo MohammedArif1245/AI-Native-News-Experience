@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Sparkles, Loader2, RotateCcw } from "lucide-react";
 import UserTypeSelector from "@/components/UserTypeSelector";
 import BriefingDisplay from "@/components/BriefingDisplay";
@@ -12,6 +12,18 @@ export default function HomePage() {
   const [briefing, setBriefing] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const prevBriefingRef = useRef(null);
+
+  // Deterministic scroll when briefing is populated
+  useEffect(() => {
+    if (briefing && !prevBriefingRef.current) {
+      document.getElementById("briefing-section")?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    }
+    prevBriefingRef.current = briefing;
+  }, [briefing]);
 
   const handleGenerate = async (e) => {
     e.preventDefault();
@@ -41,14 +53,6 @@ export default function HomePage() {
 
       const data = await response.json();
       setBriefing(data);
-
-      // Smooth scroll to briefing
-      setTimeout(() => {
-        document.getElementById("briefing-section")?.scrollIntoView({
-          behavior: "smooth",
-          block: "start",
-        });
-      }, 200);
     } catch (err) {
       console.error("Error generating briefing:", err);
       setError(err.message || "Failed to generate briefing. Please try again.");
